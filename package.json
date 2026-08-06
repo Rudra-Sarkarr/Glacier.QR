@@ -1,0 +1,27 @@
+{
+  "name": "custom-upi-qr-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord Bot for generating custom valued UPI QR codes with up to 4 stored UPI slots",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "upi",
+    "qr-code",
+    "discord-bot",
+    "discord.js",
+    "payments",
+    "india"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3"
+  }
+}

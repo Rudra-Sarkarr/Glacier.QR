@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Value UPI QR Discord Bot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-background">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="navbar">
+      <div class="brand">
+        <div class="brand-icon">🎮</div>
+        <div class="brand-title">
+          <h1>UPI QR Discord Bot</h1>
+          <span class="badge">Multi-Slot ₹ Custom Valued QR</span>
+        </div>
+      </div>
+      <div class="bot-status-indicator" id="botStatusBadge">
+        <span class="status-dot offline"></span>
+        <span class="status-text">Bot Offline</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="simulator">
+        <span>💬</span> Discord Bot Simulator
+      </button>
+      <button class="tab-btn" data-tab="slots">
+        <span>⚙️</span> Manage 4 UPI Slots (/upi-set)
+      </button>
+      <button class="tab-btn" data-tab="studio">
+        <span>🎨</span> QR Code Studio
+      </button>
+      <button class="tab-btn" data-tab="discord">
+        <span>🤖</span> Launch Discord Bot
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="content-wrapper">
+      
+      <!-- TAB 1: DISCORD BOT SIMULATOR -->
+      <section id="tab-simulator" class="tab-content active">
+        <div class="simulator-card glass-panel">
+          <div class="chat-header">
+            <div class="chat-bot-avatar">🤖</div>
+            <div class="chat-bot-info">
+              <h3>Custom UPI QR Bot <span class="bot-tag">BOT</span></h3>
+              <p class="chat-subtitle">Simulating live Discord Bot interaction with pop-up menus</p>
+            </div>
+            <div class="chat-quick-actions">
+              <button class="chip-btn" id="simCmdHelp">/help</button>
+              <button class="chip-btn" id="simCmdUpiSet">/upi-set</button>
+              <button class="chip-btn" id="simCmdQr">/qr</button>
+              <button class="chip-btn" id="simCmd300">300</button>
+            </div>
+          </div>
+
+          <div class="chat-body" id="chatBody">
+            <!-- Dynamic Discord messages rendered here -->
+          </div>
+
+          <div class="chat-footer">
+            <form id="chatForm">
+              <input type="text" id="chatInput" placeholder="Message #general or type /upi-set, /qr, 300..." autocomplete="off">
+              <button type="submit" class="send-btn">
+                <span>Send</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: MANAGE 4 UPI SLOTS -->
+      <section id="tab-slots" class="tab-content">
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2>⚙️ Configured UPI Slots (Up to 4)</h2>
+            <p>Configure up to 4 UPI IDs for your account. You can edit slots using interactive popup modals in Discord or right here!</p>
+          </div>
+
+          <div class="slots-grid" id="slotsGrid">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: QR CODE STUDIO -->
+      <section id="tab-studio" class="tab-content">
+        <div class="studio-grid">
+          <!-- Control Panel -->
+          <div class="glass-panel studio-controls">
+            <h2>🎨 Custom QR Studio</h2>
+            <p class="panel-desc">Quickly generate high-resolution custom amount QR codes directly.</p>
+
+            <form id="studioForm">
+              <div class="form-group">
+                <label for="studioSlotSelect">Select Saved UPI Slot:</label>
+                <select id="studioSlotSelect">
+                  <option value="">-- Choose Stored Slot --</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="studioUpiId">Payee UPI ID (VPA):</label>
+                <input type="text" id="studioUpiId" placeholder="e.g. merchant@okicici or 9876543210@paytm" required>
+              </div>
+
+              <div class="form-group">
+                <label for="studioPayeeName">Payee Name:</label>
+                <input type="text" id="studioPayeeName" placeholder="e.g. John's Electronics">
+              </div>
+
+              <div class="form-group">
+                <label for="studioAmount">Amount (₹):</label>
+                <div class="amount-input-wrapper">
+                  <span class="currency-symbol">₹</span>
+                  <input type="number" id="studioAmount" placeholder="300" step="any" min="1" required>
+                </div>
+                <div class="preset-chips">
+                  <button type="button" class="preset-btn" data-val="100">₹100</button>
+                  <button type="button" class="preset-btn" data-val="300">₹300</button>
+                  <button type="button" class="preset-btn" data-val="500">₹500</button>
+                  <button type="button" class="preset-btn" data-val="1000">₹1000</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="studioNote">Payment Note / Remark:</label>
+                <input type="text" id="studioNote" placeholder="Payment of Rs 300">
+              </div>
+
+              <button type="submit" class="primary-btn">Generate Custom QR Code</button>
+            </form>
+          </div>
+
+          <!-- Preview Panel -->
+          <div class="glass-panel studio-preview">
+            <h2>📱 Live QR Preview</h2>
+
+            <div class="qr-preview-box" id="qrPreviewBox">
+              <div class="qr-placeholder" id="qrPlaceholder">
+                <div class="placeholder-icon">📷</div>
+                <p>Fill form & click Generate</p>
+              </div>
+              <img id="qrImage" class="qr-image hidden" alt="Generated Custom UPI QR Code">
+            </div>
+
+            <div id="qrDetails" class="qr-details hidden">
+              <div class="detail-row">
+                <span>Amount:</span> <strong id="detAmount" class="highlight-amt">₹0.00</strong>
+              </div>
+              <div class="detail-row">
+                <span>UPI ID:</span> <code id="detUpi"></code>
+              </div>
+              <div class="detail-row">
+                <span>Payee:</span> <strong id="detName"></strong>
+              </div>
+
+              <div class="studio-actions">
+                <a id="downloadQrBtn" class="action-btn download-btn" download="custom_upi_qr.png">
+                  <span>📥 Download PNG</span>
+                </a>
+              </div>
+
+              <div class="app-launcher-bar">
+                <p>Launch UPI App:</p>
+                <div class="app-buttons" id="appButtons">
+                  <!-- App links rendered dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: DISCORD BOT LAUNCHER -->
+      <section id="tab-discord" class="tab-content">
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2>🤖 Connect & Launch Live Discord Bot</h2>
+            <p>Follow these 4 simple steps to run your Discord Bot live!</p>
+          </div>
+
+          <div class="telegram-setup-grid">
+            <div class="setup-steps">
+              <h3>How to Setup Discord Bot Application:</h3>
+              <ol class="step-list">
+                <li>Go to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a> and click <strong>New Application</strong>.</li>
+                <li>Go to <strong>Bot</strong> section and click <strong>Reset Token</strong> / <strong>Copy Token</strong>.</li>
+                <li>Enable <strong>MESSAGE CONTENT INTENT</strong> under Privileged Gateway Intents.</li>
+                <li>Go to <strong>OAuth2 -> URL Generator</strong>, check <code>bot</code> scope and permissions (Send Messages, Embed Links, Attach Files, Read Message History), then invite bot to your Discord server!</li>
+                <li>Paste the Bot Token below and click <strong>Launch Discord Bot</strong>!</li>
+              </ol>
+            </div>
+
+            <div class="bot-controller">
+              <h3>Discord Bot Controller</h3>
+              <div class="form-group">
+                <label for="botTokenInput">Discord Bot Token:</label>
+                <input type="password" id="botTokenInput" placeholder="Paste your Discord Bot Token here...">
+              </div>
+
+              <div class="form-group">
+                <label for="clientIdInput">Application Client ID (Optional):</label>
+                <input type="text" id="clientIdInput" placeholder="Optional Client ID for auto slash command registration">
+              </div>
+
+              <div class="bot-action-buttons">
+                <button id="startBotBtn" class="primary-btn">🚀 Launch Discord Bot</button>
+                <button id="stopBotBtn" class="danger-btn hidden">🛑 Stop Discord Bot</button>
+              </div>
+
+              <div id="botConsoleMsg" class="console-message hidden"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Web Modal for Slot Config in Web UI -->
+  <div class="modal-overlay hidden" id="webSlotModal">
+    <div class="modal-card glass-panel">
+      <h3 id="modalTitle">Configure UPI Slot</h3>
+      <form id="webSlotForm">
+        <input type="hidden" id="modalSlotId">
+        <div class="form-group">
+          <label for="modalUpiId">UPI ID (e.g. name@bank or 9876543210@paytm):</label>
+          <input type="text" id="modalUpiId" required placeholder="user@okicici">
+        </div>
+        <div class="form-group">
+          <label for="modalPayeeName">Payee Name (Optional):</label>
+          <input type="text" id="modalPayeeName" placeholder="My Shop">
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="cancel-btn" id="closeModalBtn">Cancel</button>
+          <button type="submit" class="primary-btn">Save Slot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
