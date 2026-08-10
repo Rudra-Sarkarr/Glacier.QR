@@ -60,11 +60,11 @@ A feature-rich, high-performance **Discord Slash Command Bot** integrating **Pte
    ADMIN_USER_ID=your_discord_user_id_here
 
    # FREE PTERODACTYL PANEL CONFIGURATION
-   FREE_PANEL_URL=https://free.nexahostings.in
+   FREE_PANEL_URL=https://your_panel_url/
    FREE_PANEL_API_KEY=your_free_panel_application_api_key_here
 
    # PAID PTERODACTYL PANEL CONFIGURATION
-   PAID_PANEL_URL=https://paid.nexahostings.in
+   PAID_PANEL_URL=https://your_panel_url/
    PAID_PANEL_API_KEY=your_paid_panel_application_api_key_here
    ```
 
