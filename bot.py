@@ -396,6 +396,160 @@ async def paid_panel_node_autocomplete(interaction: discord.Interaction, current
         return []
 
 
+# ==============================================================================
+# LINK WITH USER INTERACTIVE COMPONENTS & DM DISPATCH
+# ==============================================================================
+
+class LinkUserSelect(discord.ui.UserSelect):
+    def __init__(self, item_type: str, item_data: dict, original_view=None):
+        super().__init__(
+            placeholder="Select a Discord member to link and DM details...",
+            min_values=1,
+            max_values=1
+        )
+        self.item_type = item_type
+        self.item_data = item_data
+        self.original_view = original_view
+
+    async def callback(self, interaction: discord.Interaction):
+        if not is_allowed_server(interaction.guild):
+            await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
+            return
+        if not is_whitelisted(interaction.user.id):
+            await interaction.response.send_message(embed=send_unauthorized_embed(), ephemeral=True)
+            return
+
+        target_user = self.values[0]
+        # Save link to persistent storage
+        storage.save_linked_item(target_user.id, self.item_type, self.item_data)
+
+        panel_type_cap = self.item_data.get("panel_type", "Free").capitalize()
+        panel_url = self.item_data.get("panel_url", "")
+
+        if self.item_type == "account":
+            email = self.item_data.get("email", "N/A")
+            username = self.item_data.get("username", "N/A")
+            password = self.item_data.get("password", "N/A")
+            user_id = self.item_data.get("user_id", "N/A")
+
+            dm_embed = discord.Embed(
+                title=f"🎉 Your NexaHostings {panel_type_cap} Panel Account",
+                description=f"Hello {target_user.mention}! Your account on the **{panel_type_cap} Panel** has been created and linked to your Discord profile.",
+                color=discord.Color.gold() if panel_type_cap.lower() == "paid" else discord.Color.green()
+            )
+            dm_embed.add_field(name="📧 Email / Login", value=f"`{email}`", inline=True)
+            dm_embed.add_field(name="👤 Username", value=f"`{username}`", inline=True)
+            dm_embed.add_field(name="🔑 Password", value=f"`{password}`", inline=True)
+            if user_id != "N/A":
+                dm_embed.add_field(name="🆔 Panel User ID", value=f"`{user_id}`", inline=True)
+            if panel_url:
+                dm_embed.add_field(name="🌐 Panel Login URL", value=f"[Click to Open {panel_type_cap} Panel]({panel_url})", inline=False)
+            dm_embed.add_field(name="🔒 Security Reminder", value="Please change your password after logging in and keep your credentials private.", inline=False)
+            dm_embed.set_footer(text=f"Linked by {interaction.user.name}")
+        else:  # server
+            server_name = self.item_data.get("name", "Nexa Server")
+            server_id = self.item_data.get("server_id", "N/A")
+            identifier = self.item_data.get("identifier", "N/A")
+            alloc_ip = self.item_data.get("alloc_ip", "N/A")
+            alloc_port = self.item_data.get("alloc_port", "N/A")
+            ram = self.item_data.get("ram", "N/A")
+            cpu = self.item_data.get("cpu", "N/A")
+            disk = self.item_data.get("disk", "N/A")
+            backups = self.item_data.get("backups", "2")
+            node_name = self.item_data.get("node_name", "Auto")
+            owner_email = self.item_data.get("owner_email", "N/A")
+
+            dm_embed = discord.Embed(
+                title=f"🚀 Your NexaHostings Server Has Been Provisioned!",
+                description=f"Hello {target_user.mention}! Your server **{server_name}** is now ready on the **{panel_type_cap} Panel**.",
+                color=discord.Color.gold() if panel_type_cap.lower() == "paid" else discord.Color.green()
+            )
+            dm_embed.add_field(name="🖥️ Server Name", value=f"**{server_name}**", inline=True)
+            dm_embed.add_field(name="🆔 Server ID", value=f"`{server_id}` ({identifier})", inline=True)
+            dm_embed.add_field(name="🌐 Server Address", value=f"`{alloc_ip}:{alloc_port}`", inline=False)
+            dm_embed.add_field(name="💾 RAM", value=f"`{ram} MB`", inline=True)
+            dm_embed.add_field(name="⚡ CPU", value=f"`{cpu} %`", inline=True)
+            dm_embed.add_field(name="💽 Disk Space", value=f"`{disk} MB`", inline=True)
+            dm_embed.add_field(name="📦 Backups", value=f"`{backups} Backups`", inline=True)
+            dm_embed.add_field(name="🖥️ Node", value=f"`{node_name}`", inline=True)
+            if owner_email != "N/A":
+                dm_embed.add_field(name="👤 Owner Email", value=f"`{owner_email}`", inline=True)
+            if panel_url:
+                dm_embed.add_field(name="🌐 Panel Link", value=f"[Open {panel_type_cap} Panel]({panel_url})", inline=False)
+            dm_embed.set_footer(text=f"Linked by {interaction.user.name}")
+
+        dm_success = False
+        try:
+            await target_user.send(embed=dm_embed)
+            dm_success = True
+        except discord.Forbidden:
+            dm_success = False
+        except Exception as e:
+            print(f"Error sending DM to {target_user.id}: {e}")
+            dm_success = False
+
+        if dm_success:
+            reply_text = f"✅ **Successfully linked to {target_user.mention}!**\nDirect message containing the login & connection details has been sent to their DM."
+        else:
+            reply_text = f"⚠️ **Linked to {target_user.mention} in database**, but could not send a DM (they may have direct messages closed/disabled)."
+
+        if self.original_view:
+            for child in self.original_view.children:
+                if isinstance(child, discord.ui.Button):
+                    child.disabled = True
+                    child.label = f"Linked with @{target_user.name}"[:80]
+                    child.style = discord.ButtonStyle.success
+            try:
+                if hasattr(self.original_view, 'message') and self.original_view.message:
+                    await self.original_view.message.edit(view=self.original_view)
+            except Exception as e:
+                print(f"Could not update button on original message: {e}")
+
+        await interaction.response.edit_message(content=reply_text, view=None)
+
+
+class LinkUserSelectView(discord.ui.View):
+    def __init__(self, item_type: str, item_data: dict, original_view=None):
+        super().__init__(timeout=180)
+        self.add_item(LinkUserSelect(item_type, item_data, original_view))
+
+
+class LinkWithUserButton(discord.ui.Button):
+    def __init__(self, item_type: str, item_data: dict):
+        super().__init__(
+            label="Link with User",
+            style=discord.ButtonStyle.primary,
+            emoji="🔗"
+        )
+        self.item_type = item_type
+        self.item_data = item_data
+
+    async def callback(self, interaction: discord.Interaction):
+        if not is_allowed_server(interaction.guild):
+            await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
+            return
+        if not is_whitelisted(interaction.user.id):
+            await interaction.response.send_message(embed=send_unauthorized_embed(), ephemeral=True)
+            return
+
+        view = LinkUserSelectView(self.item_type, self.item_data, original_view=self.view)
+        item_title = "User Account" if self.item_type == "account" else f"Server ({self.item_data.get('name', 'Nexa Server')})"
+        await interaction.response.send_message(
+            content=f"👤 **Link {item_title} with Discord User**\nSelect a member from the dropdown below to link and dispatch credentials via DM:",
+            view=view,
+            ephemeral=True
+        )
+
+
+class LinkWithUserView(discord.ui.View):
+    def __init__(self, item_type: str, item_data: dict, timeout=None):
+        super().__init__(timeout=timeout)
+        self.item_type = item_type
+        self.item_data = item_data
+        self.message = None
+        self.add_item(LinkWithUserButton(item_type, item_data))
+
+
 # --- Modal Form for Custom Panel User Creation ---
 class PanelUserCreateModal(discord.ui.Modal):
     def __init__(self, panel_type: str = "free"):
@@ -459,13 +613,25 @@ class PanelUserCreateModal(discord.ui.Modal):
             embed.add_field(name="🌐 Panel URL", value=f"[Open {self.panel_type.capitalize()} Panel]({panel_url})", inline=False)
             embed.set_footer(text=f"Created by {interaction.user.name}")
 
-            await interaction.followup.send(embed=embed, ephemeral=False)
+            account_data = {
+                "panel_type": self.panel_type,
+                "panel_url": panel_url,
+                "email": email,
+                "username": username,
+                "password": password,
+                "user_id": user_id,
+                "created_by": interaction.user.name
+            }
+            link_view = LinkWithUserView("account", account_data)
+            msg = await interaction.followup.send(embed=embed, view=link_view, ephemeral=False)
+            link_view.message = msg
         except Exception as e:
             print(f"Error in PanelUserCreateModal: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message(f"❌ Account Creation Failed: {e}", ephemeral=True)
             else:
                 await interaction.followup.send(f"❌ Account Creation Failed: {e}", ephemeral=True)
+
 
 
 # --- Modal Form for UPI Slot Configuration ---
@@ -897,7 +1063,26 @@ async def paidservercreate_slash(interaction: discord.Interaction, email: str, r
         embed.add_field(name="🌐 Paid Panel Link", value=f"[Open Paid Panel]({panel_url})", inline=False)
         embed.set_footer(text=f"Created by {interaction.user.name}")
 
-        await interaction.followup.send(embed=embed, ephemeral=False)
+        server_data = {
+            "panel_type": "paid",
+            "panel_url": panel_url,
+            "server_id": server_id,
+            "identifier": identifier,
+            "name": name,
+            "node_name": node_name,
+            "alloc_ip": alloc_ip,
+            "alloc_port": alloc_port,
+            "ram": ram,
+            "cpu": cpu,
+            "disk": disk,
+            "backups": 2,
+            "owner_email": email,
+            "owner_username": username,
+            "created_by": interaction.user.name
+        }
+        link_view = LinkWithUserView("server", server_data)
+        msg = await interaction.followup.send(embed=embed, view=link_view, ephemeral=False)
+        link_view.message = msg
     except Exception as e:
         await interaction.followup.send(f"❌ Paid Server Creation Failed: {e}", ephemeral=False)
 
@@ -931,7 +1116,18 @@ async def paidusercreate_random_slash(interaction: discord.Interaction):
         embed.add_field(name="🌐 Paid Panel Link", value=f"[Click Here to Open Paid Panel]({panel_url})", inline=False)
         embed.set_footer(text=f"Requested by {interaction.user.name}")
 
-        await interaction.followup.send(embed=embed, ephemeral=False)
+        account_data = {
+            "panel_type": "paid",
+            "panel_url": panel_url,
+            "email": email,
+            "username": username,
+            "password": password,
+            "user_id": user_id,
+            "created_by": interaction.user.name
+        }
+        link_view = LinkWithUserView("account", account_data)
+        msg = await interaction.followup.send(embed=embed, view=link_view, ephemeral=False)
+        link_view.message = msg
     except Exception as e:
         await interaction.followup.send(f"❌ Paid Panel Random Account Creation Failed: {e}", ephemeral=False)
 
@@ -969,7 +1165,18 @@ async def paidusercreate_slash(interaction: discord.Interaction, email: str = No
         embed.add_field(name="🌐 Paid Panel URL", value=f"[Open Paid Panel]({panel_url})", inline=False)
         embed.set_footer(text=f"Created by {interaction.user.name}")
 
-        await interaction.followup.send(embed=embed, ephemeral=False)
+        account_data = {
+            "panel_type": "paid",
+            "panel_url": panel_url,
+            "email": email,
+            "username": username,
+            "password": password,
+            "user_id": user_id,
+            "created_by": interaction.user.name
+        }
+        link_view = LinkWithUserView("account", account_data)
+        msg = await interaction.followup.send(embed=embed, view=link_view, ephemeral=False)
+        link_view.message = msg
     except Exception as e:
         await interaction.followup.send(f"❌ Paid Panel User Creation Failed: {e}", ephemeral=False)
 
@@ -1030,7 +1237,26 @@ async def freeservercreate_slash(interaction: discord.Interaction, email: str, r
         embed.add_field(name="🌐 Free Panel Link", value=f"[Open Free Panel]({panel_url})", inline=False)
         embed.set_footer(text=f"Created by {interaction.user.name}")
 
-        await interaction.followup.send(embed=embed, ephemeral=False)
+        server_data = {
+            "panel_type": "free",
+            "panel_url": panel_url,
+            "server_id": server_id,
+            "identifier": identifier,
+            "name": name,
+            "node_name": node_name,
+            "alloc_ip": alloc_ip,
+            "alloc_port": alloc_port,
+            "ram": ram,
+            "cpu": cpu,
+            "disk": disk,
+            "backups": 2,
+            "owner_email": email,
+            "owner_username": username,
+            "created_by": interaction.user.name
+        }
+        link_view = LinkWithUserView("server", server_data)
+        msg = await interaction.followup.send(embed=embed, view=link_view, ephemeral=False)
+        link_view.message = msg
     except Exception as e:
         await interaction.followup.send(f"❌ Free Server Creation Failed: {e}", ephemeral=False)
 
@@ -1064,7 +1290,18 @@ async def freeusercreate_random_slash(interaction: discord.Interaction):
         embed.add_field(name="🌐 Free Panel Link", value=f"[Click Here to Open Free Panel]({panel_url})", inline=False)
         embed.set_footer(text=f"Requested by {interaction.user.name}")
 
-        await interaction.followup.send(embed=embed, ephemeral=False)
+        account_data = {
+            "panel_type": "free",
+            "panel_url": panel_url,
+            "email": email,
+            "username": username,
+            "password": password,
+            "user_id": user_id,
+            "created_by": interaction.user.name
+        }
+        link_view = LinkWithUserView("account", account_data)
+        msg = await interaction.followup.send(embed=embed, view=link_view, ephemeral=False)
+        link_view.message = msg
     except Exception as e:
         await interaction.followup.send(f"❌ Random Panel Account Creation Failed: {e}", ephemeral=False)
 
@@ -1102,7 +1339,18 @@ async def usercreate_slash(interaction: discord.Interaction, email: str = None, 
         embed.add_field(name="🌐 Free Panel URL", value=f"[Open Free Panel]({panel_url})", inline=False)
         embed.set_footer(text=f"Created by {interaction.user.name}")
 
-        await interaction.followup.send(embed=embed, ephemeral=False)
+        account_data = {
+            "panel_type": "free",
+            "panel_url": panel_url,
+            "email": email,
+            "username": username,
+            "password": password,
+            "user_id": user_id,
+            "created_by": interaction.user.name
+        }
+        link_view = LinkWithUserView("account", account_data)
+        msg = await interaction.followup.send(embed=embed, view=link_view, ephemeral=False)
+        link_view.message = msg
     except Exception as e:
         await interaction.followup.send(f"❌ Free Panel User Creation Failed: {e}", ephemeral=False)
 
@@ -1199,10 +1447,9 @@ async def help_slash(interaction: discord.Interaction):
             "🔹 `/qr` - Generate payment QR code\n"
             "🔹 `/myupi` - View saved UPI slots\n"
             "🔹 `300` (chat) - Direct QR generator\n\n"
-            "**✉️ DM & Management Commands:**\n"
+            "**⚙️ Management & Utility Commands:**\n"
             "🔹 `/cmd` - Display full commands panel\n"
-            "🔹 `/dm @user message` - DM a user\n"
-            "🔹 `/dmall` - Broadcast DM\n"
+            "🔹 `/linked-info @user` - View linked panel accounts & servers\n"
             "🔹 `/wl @user` / `/unwl @user` - Whitelist manager\n"
             "🔹 `/servers` / `/get` / `/ping` - Bot utils"
         ),
@@ -1237,13 +1484,12 @@ async def cmd_slash(interaction: discord.Interaction):
             "9. `/qr` → Generate payment QR code for ₹300, ₹500, etc.\n"
             "10. `/myupi` → View stored UPI slots\n"
             "11. `300` (type number) → Direct custom QR code generation\n\n"
-            "**✉️ DM & Management Commands:**\n"
+            "**⚙️ Management & Utility Commands:**\n"
             "12. `/ping` → Displays bot latency\n"
-            "13. `/dm @user <message>` → Send a DM to a member\n"
-            "14. `/dmall <cooldown> <all/on/off> <message>` → Send DM to server members\n"
-            "15. `/servers` → Show servers list where bot is present\n"
-            "16. `/get <server_id>` → Get server invite link\n"
-            "17. `/wl @user` / `/unwl @user` → Whitelist manager"
+            "13. `/linked-info @user` → View linked panel accounts & servers\n"
+            "14. `/servers` → Show servers list where bot is present\n"
+            "15. `/get <server_id>` → Get server invite link\n"
+            "16. `/wl @user` / `/unwl @user` → Whitelist manager"
         ),
         color=discord.Color(0x17004e)
     )
@@ -1293,69 +1539,6 @@ async def unwl_slash(interaction: discord.Interaction, user: discord.User):
     embed = discord.Embed(title="WL Manager", description=msg, color=discord.Color(0x17004e))
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="dm", description="Send a direct message to a member")
-@app_commands.describe(user="Select/Mention the target user", message="The message to send")
-async def dm_slash(interaction: discord.Interaction, user: discord.User, message: str):
-    if not is_allowed_server(interaction.guild):
-        await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
-        return
-    if not is_whitelisted(interaction.user.id):
-        await interaction.response.send_message(embed=send_unauthorized_embed(), ephemeral=True)
-        return
-    try:
-        await user.send(message)
-        embed = discord.Embed(title="DM Command", description=f"`✅` Message sent to {user.mention} (`{user.name}`)!\n**Message**: *{message}*", color=discord.Color(0x17004e))
-        await interaction.response.send_message(embed=embed)
-    except discord.Forbidden:
-        await interaction.response.send_message(f"❌ Cannot DM {user.mention}. User may have DMs disabled.", ephemeral=True)
-    except Exception as e:
-        await interaction.response.send_message(f"❌ Error sending DM: {e}", ephemeral=True)
-
-@bot.tree.command(name="dmall", description="Send a DM message to server members")
-@app_commands.describe(cooldown="Delay in seconds (0 to 3)", target="Filter: all, on, or off", message="The message to broadcast")
-@app_commands.choices(target=[
-    app_commands.Choice(name="All Members (all)", value="all"),
-    app_commands.Choice(name="Online Only (on)", value="on"),
-    app_commands.Choice(name="Offline Only (off)", value="off")
-])
-async def dmall_slash(interaction: discord.Interaction, cooldown: int, target: app_commands.Choice[str], message: str):
-    if not is_allowed_server(interaction.guild):
-        await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
-        return
-    if not is_whitelisted(interaction.user.id):
-        await interaction.response.send_message(embed=send_unauthorized_embed(), ephemeral=True)
-        return
-
-    if cooldown < 0 or cooldown > 3:
-        await interaction.response.send_message("❌ Cooldown must be between 0 and 3 seconds.", ephemeral=True)
-        return
-
-    await interaction.response.defer()
-
-    target_val = target.value
-    if target_val == 'all':
-        members = interaction.guild.members
-    elif target_val == 'off':
-        members = [m for m in interaction.guild.members if m.status == discord.Status.offline and not m.bot]
-    elif target_val == 'on':
-        members = [m for m in interaction.guild.members if m.status in [discord.Status.online, discord.Status.dnd, discord.Status.idle] and not m.bot]
-
-    success_count, failure_count = 0, 0
-    for member in members:
-        if not member.bot:
-            try:
-                await member.send(message)
-                success_count += 1
-                await asyncio.sleep(cooldown)
-            except Exception:
-                failure_count += 1
-
-    embed = discord.Embed(
-        title="DMall Finished",
-        description=f"`✅` **DMall Broadcast Finished!**\nSuccessfully sent to `{success_count}` users.\nGot `{failure_count}` failures.",
-        color=discord.Color(0x17004e)
-    )
-    await interaction.followup.send(embed=embed)
 
 @bot.tree.command(name="servers", description="Show list of servers where the bot is present")
 async def servers_slash(interaction: discord.Interaction):
@@ -1393,6 +1576,53 @@ async def get_slash(interaction: discord.Interaction, server_id: str):
         await interaction.response.send_message(embed=embed)
     except Exception as e:
         await interaction.response.send_message(f"❌ Error: {e}", ephemeral=True)
+
+@bot.tree.command(name="linked-info", description="View Pterodactyl accounts and servers linked to a Discord member")
+@app_commands.describe(user="Select/Mention the Discord member to check")
+async def linked_info_slash(interaction: discord.Interaction, user: discord.User):
+    if not is_allowed_server(interaction.guild):
+        await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
+        return
+    if not is_whitelisted(interaction.user.id):
+        await interaction.response.send_message(embed=send_unauthorized_embed(), ephemeral=True)
+        return
+
+    data = storage.get_user_linked_items(user.id)
+    accounts = data.get("accounts", [])
+    servers = data.get("servers", [])
+
+    embed = discord.Embed(
+        title=f"🔗 Linked Pterodactyl Details for {user.name}",
+        description=f"Showing all accounts and servers linked to {user.mention} (`{user.id}`).",
+        color=discord.Color(0x17004e)
+    )
+
+    if not accounts and not servers:
+        embed.add_field(name="ℹ️ Status", value="No accounts or servers are currently linked to this user.", inline=False)
+    else:
+        if accounts:
+            acc_lines = []
+            for idx, acc in enumerate(accounts, 1):
+                ptype = acc.get("panel_type", "free").capitalize()
+                email = acc.get("email", "N/A")
+                uname = acc.get("username", "N/A")
+                pwd = acc.get("password", "N/A")
+                acc_lines.append(f"**{idx}. [{ptype} Panel]** `{email}` (`{uname}`) | Pass: `{pwd}`")
+            embed.add_field(name=f"👤 Linked Accounts ({len(accounts)})", value="\n".join(acc_lines)[:1024], inline=False)
+
+        if servers:
+            srv_lines = []
+            for idx, srv in enumerate(servers, 1):
+                ptype = srv.get("panel_type", "free").capitalize()
+                sname = srv.get("name", "Nexa Server")
+                sid = srv.get("server_id", "N/A")
+                ip = srv.get("alloc_ip", "N/A")
+                port = srv.get("alloc_port", "N/A")
+                srv_lines.append(f"**{idx}. [{ptype} Panel] {sname}** (ID: `{sid}`) → `{ip}:{port}`")
+            embed.add_field(name=f"🖥️ Linked Servers ({len(servers)})", value="\n".join(srv_lines)[:1024], inline=False)
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 
 # ==============================================================================
@@ -1448,7 +1678,19 @@ async def paidusercreate_cmd(ctx, mode_or_email: str = None, username: str = Non
             embed.add_field(name="👤 Username", value=f"`{username}`", inline=True)
             embed.add_field(name="🔑 Password", value=f"`{password}`", inline=True)
             embed.add_field(name="🌐 Paid Panel Link", value=f"[Click Here to Open Paid Panel]({panel_url})", inline=False)
-            await ctx.send(embed=format_author_footer(embed, ctx.author))
+
+            account_data = {
+                "panel_type": "paid",
+                "panel_url": panel_url,
+                "email": email,
+                "username": username,
+                "password": password,
+                "user_id": user_id,
+                "created_by": ctx.author.name
+            }
+            link_view = LinkWithUserView("account", account_data)
+            msg = await ctx.send(embed=format_author_footer(embed, ctx.author), view=link_view)
+            link_view.message = msg
         except Exception as e:
             await ctx.send(f"❌ Paid Panel Random Account Creation Failed: {e}")
         return
@@ -1473,7 +1715,19 @@ async def paidusercreate_cmd(ctx, mode_or_email: str = None, username: str = Non
         embed.add_field(name="👤 Username", value=f"`{username}`", inline=True)
         embed.add_field(name="🔑 Password", value=f"`{password}`", inline=True)
         embed.add_field(name="🌐 Paid Panel URL", value=f"[Open Paid Panel]({panel_url})", inline=False)
-        await ctx.send(embed=format_author_footer(embed, ctx.author))
+
+        account_data = {
+            "panel_type": "paid",
+            "panel_url": panel_url,
+            "email": email,
+            "username": username,
+            "password": password,
+            "user_id": user_id,
+            "created_by": ctx.author.name
+        }
+        link_view = LinkWithUserView("account", account_data)
+        msg = await ctx.send(embed=format_author_footer(embed, ctx.author), view=link_view)
+        link_view.message = msg
     except Exception as e:
         await ctx.send(f"❌ Paid Panel User Creation Failed: {e}")
 
@@ -1505,6 +1759,7 @@ async def paidservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int
         panel_url = os.getenv("PAID_PANEL_URL", "https://paid.nexahostings.in")
         srv_attr = res.get("attributes", {})
         server_id = srv_attr.get("id", "N/A")
+        identifier = srv_attr.get("identifier", "N/A")
 
         embed = discord.Embed(
             title="💎 Paid Panel Server Created Successfully!",
@@ -1519,7 +1774,27 @@ async def paidservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int
         embed.add_field(name="💽 Disk Space", value=f"`{disk} MB`", inline=True)
         embed.add_field(name="📦 Default Backups", value="`2 Backups`", inline=True)
         embed.add_field(name="🌐 Paid Panel Link", value=f"[Open Paid Panel]({panel_url})", inline=False)
-        await ctx.send(embed=format_author_footer(embed, ctx.author))
+
+        server_data = {
+            "panel_type": "paid",
+            "panel_url": panel_url,
+            "server_id": server_id,
+            "identifier": identifier,
+            "name": name,
+            "node_name": node_name,
+            "alloc_ip": alloc_ip,
+            "alloc_port": alloc_port,
+            "ram": ram,
+            "cpu": cpu,
+            "disk": disk,
+            "backups": 2,
+            "owner_email": email,
+            "owner_username": username,
+            "created_by": ctx.author.name
+        }
+        link_view = LinkWithUserView("server", server_data)
+        msg = await ctx.send(embed=format_author_footer(embed, ctx.author), view=link_view)
+        link_view.message = msg
     except Exception as e:
         await ctx.send(f"❌ Paid Server Creation Failed: {e}")
 
@@ -1551,6 +1826,7 @@ async def freeservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int
         panel_url = os.getenv("FREE_PANEL_URL", "https://free.nexahostings.in")
         srv_attr = res.get("attributes", {})
         server_id = srv_attr.get("id", "N/A")
+        identifier = srv_attr.get("identifier", "N/A")
 
         embed = discord.Embed(
             title="✅ Free Panel Server Created Successfully!",
@@ -1565,7 +1841,27 @@ async def freeservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int
         embed.add_field(name="💽 Disk Space", value=f"`{disk} MB`", inline=True)
         embed.add_field(name="📦 Default Backups", value="`2 Backups`", inline=True)
         embed.add_field(name="🌐 Free Panel Link", value=f"[Open Free Panel]({panel_url})", inline=False)
-        await ctx.send(embed=format_author_footer(embed, ctx.author))
+
+        server_data = {
+            "panel_type": "free",
+            "panel_url": panel_url,
+            "server_id": server_id,
+            "identifier": identifier,
+            "name": name,
+            "node_name": node_name,
+            "alloc_ip": alloc_ip,
+            "alloc_port": alloc_port,
+            "ram": ram,
+            "cpu": cpu,
+            "disk": disk,
+            "backups": 2,
+            "owner_email": email,
+            "owner_username": username,
+            "created_by": ctx.author.name
+        }
+        link_view = LinkWithUserView("server", server_data)
+        msg = await ctx.send(embed=format_author_footer(embed, ctx.author), view=link_view)
+        link_view.message = msg
     except Exception as e:
         await ctx.send(f"❌ Server Creation Failed: {e}")
 
@@ -1595,7 +1891,19 @@ async def freeusercreate_random_cmd(ctx):
         embed.add_field(name="👤 Username", value=f"`{username}`", inline=True)
         embed.add_field(name="🔑 Password", value=f"`{password}`", inline=True)
         embed.add_field(name="🌐 Free Panel Link", value=f"[Click Here to Open Free Panel]({panel_url})", inline=False)
-        await ctx.send(embed=format_author_footer(embed, ctx.author))
+
+        account_data = {
+            "panel_type": "free",
+            "panel_url": panel_url,
+            "email": email,
+            "username": username,
+            "password": password,
+            "user_id": user_id,
+            "created_by": ctx.author.name
+        }
+        link_view = LinkWithUserView("account", account_data)
+        msg = await ctx.send(embed=format_author_footer(embed, ctx.author), view=link_view)
+        link_view.message = msg
     except Exception as e:
         await ctx.send(f"❌ Random Panel Account Creation Failed: {e}")
 
@@ -1632,7 +1940,19 @@ async def usercreate_cmd(ctx, mode_or_email: str = None, username: str = None, p
         embed.add_field(name="👤 Username", value=f"`{username}`", inline=True)
         embed.add_field(name="🔑 Password", value=f"`{password}`", inline=True)
         embed.add_field(name="🌐 Free Panel URL", value=f"[Open Free Panel]({panel_url})", inline=False)
-        await ctx.send(embed=format_author_footer(embed, ctx.author))
+
+        account_data = {
+            "panel_type": "free",
+            "panel_url": panel_url,
+            "email": email,
+            "username": username,
+            "password": password,
+            "user_id": user_id,
+            "created_by": ctx.author.name
+        }
+        link_view = LinkWithUserView("account", account_data)
+        msg = await ctx.send(embed=format_author_footer(embed, ctx.author), view=link_view)
+        link_view.message = msg
     except Exception as e:
         await ctx.send(f"❌ Panel User Creation Failed: {e}")
 
@@ -1690,13 +2010,12 @@ async def command_panel(ctx):
             "9. `/qr` → Generate payment QR code for ₹300, ₹500, etc.\n"
             "10. `/myupi` → View stored UPI slots\n"
             "11. `300` (type number) → Direct custom QR code generation\n\n"
-            "**✉️ DM & Management Commands:**\n"
+            "**⚙️ Management & Utility Commands:**\n"
             "12. `/ping` → Displays bot latency\n"
-            "13. `/dm @user <message>` → Send a DM to a member by selecting/@mentioning\n"
-            "14. `/dmall <cooldown> <all/on/off> <message>` → Send DM to server members\n"
-            "15. `/servers` → Show servers list where bot is present\n"
-            "16. `/get <server_id>` → Get server invite link\n"
-            "17. `/wl @user` / `/unwl @user` → Whitelist manager"
+            "13. `/linked-info @user` → View linked panel accounts & servers\n"
+            "14. `/servers` → Show servers list where bot is present\n"
+            "15. `/get <server_id>` → Get server invite link\n"
+            "16. `/wl @user` / `/unwl @user` → Whitelist manager"
         ),
         color=discord.Color(0x17004e)
     )
@@ -1712,67 +2031,6 @@ async def ping_cmd(ctx):
         return
     latency = round(bot.latency * 1000)
     embed = discord.Embed(title="Bot Latency", description=f"`🤖` Latency is `{latency}ms`.", color=discord.Color(0x17004e))
-    await ctx.send(embed=format_author_footer(embed, ctx.author))
-
-@bot.command(name='dm')
-async def send_dm_cmd(ctx, user: discord.User, *, message: str):
-    if not is_allowed_server(ctx.guild):
-        await ctx.send(embed=send_wrong_server_embed())
-        return
-    if not is_whitelisted(ctx.author.id):
-        await ctx.send(embed=send_unauthorized_embed())
-        return
-    try:
-        await user.send(message)
-        embed = discord.Embed(title="DM Command", description=f"`✅` Message sent to {user.mention} (`{user.name}`)!\n**Message**: *{message}*", color=discord.Color(0x17004e))
-        await ctx.send(embed=format_author_footer(embed, ctx.author))
-    except discord.Forbidden:
-        await ctx.send(f"❌ Cannot DM {user.mention}. DMs may be closed.")
-    except Exception as e:
-        await ctx.send(f"❌ Error: {e}")
-
-@bot.command(name='dmall')
-async def send_dm_all_cmd(ctx, cooldown: int, target: str, *, message_content: str):
-    if not is_allowed_server(ctx.guild):
-        await ctx.send(embed=send_wrong_server_embed())
-        return
-    if not is_whitelisted(ctx.author.id):
-        await ctx.send(embed=send_unauthorized_embed())
-        return
-
-    if cooldown < 0 or cooldown > 3:
-        embed = discord.Embed(title="DMall Command", description="`❌` **Cooldown must be between `0` and `3`.**", color=discord.Color(0x17004e))
-        await ctx.send(embed=format_author_footer(embed, ctx.author))
-        return
-
-    target = target.lower()
-    if target not in ['all', 'off', 'on']:
-        embed = discord.Embed(title="DMall Command", description="`❌` **Target must be `all`, `off` or `on`.**", color=discord.Color(0x17004e))
-        await ctx.send(embed=format_author_footer(embed, ctx.author))
-        return
-
-    if target == 'all':
-        members = ctx.guild.members
-    elif target == 'off':
-        members = [m for m in ctx.guild.members if m.status == discord.Status.offline and not m.bot]
-    elif target == 'on':
-        members = [m for m in ctx.guild.members if m.status in [discord.Status.online, discord.Status.dnd, discord.Status.idle] and not m.bot]
-
-    success_count, failure_count = 0, 0
-    for member in members:
-        if not member.bot:
-            try:
-                await member.send(message_content)
-                success_count += 1
-                await asyncio.sleep(cooldown)
-            except Exception:
-                failure_count += 1
-
-    embed = discord.Embed(
-        title="DMall Finished",
-        description=f"`✅` **DMall Broadcast Finished!**\nSuccessfully sent to `{success_count}` users.\nGot `{failure_count}` failures.",
-        color=discord.Color(0x17004e)
-    )
     await ctx.send(embed=format_author_footer(embed, ctx.author))
 
 @bot.command(name='servers')
@@ -1814,6 +2072,53 @@ async def get_server_invite_cmd(ctx, server_id: int):
         embed = discord.Embed(title="Server Invite Manager", description=f"`❌` Unable to create invite: {e}", color=discord.Color(0x17004e))
 
     await ctx.send(embed=format_author_footer(embed, ctx.author))
+
+@bot.command(name='linkedinfo', aliases=['links', 'userlinks'])
+async def linkedinfo_cmd(ctx, user: discord.User = None):
+    if not is_allowed_server(ctx.guild):
+        await ctx.send(embed=send_wrong_server_embed())
+        return
+    if not is_whitelisted(ctx.author.id):
+        await ctx.send(embed=send_unauthorized_embed())
+        return
+
+    target = user or ctx.author
+    data = storage.get_user_linked_items(target.id)
+    accounts = data.get("accounts", [])
+    servers = data.get("servers", [])
+
+    embed = discord.Embed(
+        title=f"🔗 Linked Pterodactyl Details for {target.name}",
+        description=f"Showing all accounts and servers linked to {target.mention} (`{target.id}`).",
+        color=discord.Color(0x17004e)
+    )
+
+    if not accounts and not servers:
+        embed.add_field(name="ℹ️ Status", value="No accounts or servers are currently linked to this user.", inline=False)
+    else:
+        if accounts:
+            acc_lines = []
+            for idx, acc in enumerate(accounts, 1):
+                ptype = acc.get("panel_type", "free").capitalize()
+                email = acc.get("email", "N/A")
+                uname = acc.get("username", "N/A")
+                pwd = acc.get("password", "N/A")
+                acc_lines.append(f"**{idx}. [{ptype} Panel]** `{email}` (`{uname}`) | Pass: `{pwd}`")
+            embed.add_field(name=f"👤 Linked Accounts ({len(accounts)})", value="\n".join(acc_lines)[:1024], inline=False)
+
+        if servers:
+            srv_lines = []
+            for idx, srv in enumerate(servers, 1):
+                ptype = srv.get("panel_type", "free").capitalize()
+                sname = srv.get("name", "Nexa Server")
+                sid = srv.get("server_id", "N/A")
+                ip = srv.get("alloc_ip", "N/A")
+                port = srv.get("alloc_port", "N/A")
+                srv_lines.append(f"**{idx}. [{ptype} Panel] {sname}** (ID: `{sid}`) → `{ip}:{port}`")
+            embed.add_field(name=f"🖥️ Linked Servers ({len(servers)})", value="\n".join(srv_lines)[:1024], inline=False)
+
+    await ctx.send(embed=format_author_footer(embed, ctx.author))
+
 
 
 # --- On Message Listener for Server Check & Direct Amounts ---

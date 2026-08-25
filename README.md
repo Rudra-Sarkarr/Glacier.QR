@@ -14,6 +14,9 @@ A feature-rich, high-performance **Discord Slash Command Bot** integrating **Pte
 - **💳 Multi-Slot Custom Value UPI QR Generator**:
   - Configure up to 4 UPI ID slots using pop-up modal dialogs (`/upi-set`).
   - Generate instant QR codes for custom amounts (`/qr` or typing `300` directly in chat).
+- **🔗 One-Click "Link with User" & Auto-DM Delivery**:
+  - Interactive "Link with User" button on every user/server creation success embed.
+  - Dropdown member selector links the resource to the Discord user and automatically delivers login credentials & server connection details directly to their DM.
 - **🔒 Private Mode & Guild Lockdown**:
   - Restricted to specific Discord Server Guild ID.
   - Whitelist security system (`/wl`, `/unwl`) allowing only authorized members to run commands.
@@ -89,8 +92,7 @@ A feature-rich, high-performance **Discord Slash Command Bot** integrating **Pte
 | `/upi-set` | UPI QR | Configure 4 stored UPI ID slots via pop-up modals |
 | `/qr` | UPI QR | Select slot & amount to render payment QR code |
 | `/myupi` | UPI QR | View stored UPI ID slots |
-| `/dm` | Admin | Direct message a specified server member |
-| `/dmall` | Admin | Broadcast direct message to server members |
+| `/linked-info` | Admin | View all Pterodactyl accounts/servers linked to a Discord user |
 | `/wl` / `/unwl` | Admin | Add or remove members from whitelist |
 | `/cmd` | Utility | Show full interactive commands panel |
 | `/ping` | Utility | Display bot latency |
