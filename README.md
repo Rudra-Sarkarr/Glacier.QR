@@ -39,8 +39,8 @@ With **PteroLink**, administrators can provision game servers on both **Free and
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/Rudra-Sarkarr/NexaHostings-bot-v1.git
-   cd NexaHostings-bot-v1
+   git clone https://github.com/Rudra-Sarkarr/PteroLink.git
+   cd PteroLink
    ```
 
 2. **Install required Python dependencies**:
