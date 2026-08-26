@@ -3,7 +3,6 @@
 [![Discord.js](https://img.shields.io/badge/Discord.js-v14-blue.svg)](https://discord.js.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D%2018.0.0-green.svg)](https://nodejs.org/)
 [![Database](https://img.shields.io/badge/Database-SQLite3-lightblue.svg)](https://www.sqlite.org/)
-[![Wiki Documentation](https://img.shields.io/badge/Documentation-Official%20Wiki-007ACC?style=flat-square&logo=github)](https://github.com/Rudra-Sarkarr/Tickxa-Ticket-Manager/wiki)
 [![Powered By NexaHostings](https://img.shields.io/badge/Powered%20By-NexaHostings-FF6B6B?style=flat-square&logo=rocket)](https://www.nexahostings.in)
 [![Join Discord](https://img.shields.io/badge/Discord-Join%20NexaHostings-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/tjwNTGwm8k)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
