@@ -108,10 +108,10 @@ def send_wrong_server_embed():
 
 
 # --- Random Credentials Generator ---
-def generate_random_credentials(prefix="nexa"):
+def generate_random_credentials(prefix="pterolink"):
     rand_id = ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(6))
     username = f"{prefix}_{rand_id}"
-    email = f"{username}@nexahostings.in"
+    email = f"{username}@pterolink.internal"
 
     alphabet = string.ascii_letters + string.digits + "!@#$"
     password_chars = [
@@ -433,7 +433,7 @@ class LinkUserSelect(discord.ui.UserSelect):
             user_id = self.item_data.get("user_id", "N/A")
 
             dm_embed = discord.Embed(
-                title=f"🎉 Your NexaHostings {panel_type_cap} Panel Account",
+                title=f"🎉 Your PteroLink {panel_type_cap} Panel Account",
                 description=f"Hello {target_user.mention}! Your account on the **{panel_type_cap} Panel** has been created and linked to your Discord profile.",
                 color=discord.Color.gold() if panel_type_cap.lower() == "paid" else discord.Color.green()
             )
@@ -447,7 +447,7 @@ class LinkUserSelect(discord.ui.UserSelect):
             dm_embed.add_field(name="🔒 Security Reminder", value="Please change your password after logging in and keep your credentials private.", inline=False)
             dm_embed.set_footer(text=f"Linked by {interaction.user.name}")
         else:  # server
-            server_name = self.item_data.get("name", "Nexa Server")
+            server_name = self.item_data.get("name", "PteroLink Server")
             server_id = self.item_data.get("server_id", "N/A")
             identifier = self.item_data.get("identifier", "N/A")
             alloc_ip = self.item_data.get("alloc_ip", "N/A")
@@ -460,7 +460,7 @@ class LinkUserSelect(discord.ui.UserSelect):
             owner_email = self.item_data.get("owner_email", "N/A")
 
             dm_embed = discord.Embed(
-                title=f"🚀 Your NexaHostings Server Has Been Provisioned!",
+                title=f"🚀 Your PteroLink Server Has Been Provisioned!",
                 description=f"Hello {target_user.mention}! Your server **{server_name}** is now ready on the **{panel_type_cap} Panel**.",
                 color=discord.Color.gold() if panel_type_cap.lower() == "paid" else discord.Color.green()
             )
@@ -533,7 +533,7 @@ class LinkWithUserButton(discord.ui.Button):
             return
 
         view = LinkUserSelectView(self.item_type, self.item_data, original_view=self.view)
-        item_title = "User Account" if self.item_type == "account" else f"Server ({self.item_data.get('name', 'Nexa Server')})"
+        item_title = "User Account" if self.item_type == "account" else f"Server ({self.item_data.get('name', 'PteroLink Server')})"
         await interaction.response.send_message(
             content=f"👤 **Link {item_title} with Discord User**\nSelect a member from the dropdown below to link and dispatch credentials via DM:",
             view=view,
@@ -1011,17 +1011,17 @@ async def reloaduserlist_slash(interaction: discord.Interaction):
 # PAID PANEL SLASH COMMANDS (Public Channel Announcement Mode)
 # ==============================================================================
 
-@bot.tree.command(name="paidservercreate", description="Create a new server on Paid NexaHostings Panel with Node Selection, RAM, CPU, Disk & Auto IP")
+@bot.tree.command(name="paidservercreate", description="Create a new server on Paid PteroLink Panel with Node Selection, RAM, CPU, Disk & Auto IP")
 @app_commands.describe(
     email="Select existing paid user email (autocomplete list available)",
     ram="RAM memory limit in MB (e.g. 4096 or 8192)",
     cpu="CPU limit percentage (e.g. 200 or 400)",
     disk="Disk space limit in MB (e.g. 10240 or 20480)",
     node="Select Paid Panel Node (autocomplete list available)",
-    name="Server Name (Optional, default: Paid Nexa Server)"
+    name="Server Name (Optional, default: Paid PteroLink Server)"
 )
 @app_commands.autocomplete(email=paid_panel_email_autocomplete, node=paid_panel_node_autocomplete)
-async def paidservercreate_slash(interaction: discord.Interaction, email: str, ram: int, cpu: int, disk: int, node: str = None, name: str = "Paid Nexa Server"):
+async def paidservercreate_slash(interaction: discord.Interaction, email: str, ram: int, cpu: int, disk: int, node: str = None, name: str = "Paid PteroLink Server"):
     if not is_allowed_server(interaction.guild):
         await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
         return
@@ -1086,7 +1086,7 @@ async def paidservercreate_slash(interaction: discord.Interaction, email: str, r
     except Exception as e:
         await interaction.followup.send(f"❌ Paid Server Creation Failed: {e}", ephemeral=False)
 
-@bot.tree.command(name="paidusercreate-random", description="Generate a random user account on Paid NexaHostings Panel automatically")
+@bot.tree.command(name="paidusercreate-random", description="Generate a random user account on Paid PteroLink Panel automatically")
 async def paidusercreate_random_slash(interaction: discord.Interaction):
     if not is_allowed_server(interaction.guild):
         await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
@@ -1098,7 +1098,7 @@ async def paidusercreate_random_slash(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=False)
 
     try:
-        email, username, password = generate_random_credentials(prefix="paid_nexa")
+        email, username, password = generate_random_credentials(prefix="paid_pterolink")
         res = await create_panel_user_api(email, username, password, panel_type="paid")
 
         panel_url = os.getenv("PAID_PANEL_URL", "https://paid.nexahostings.in")
@@ -1185,17 +1185,17 @@ async def paidusercreate_slash(interaction: discord.Interaction, email: str = No
 # FREE PANEL SLASH COMMANDS (Public Channel Announcement Mode)
 # ==============================================================================
 
-@bot.tree.command(name="freeservercreate", description="Create a new server on Free NexaHostings Panel with Node Selection, RAM, CPU, Disk & Auto IP")
+@bot.tree.command(name="freeservercreate", description="Create a new server on Free PteroLink Panel with Node Selection, RAM, CPU, Disk & Auto IP")
 @app_commands.describe(
     email="Select existing user email (autocomplete list available)",
     ram="RAM memory limit in MB (e.g. 2048 or 4096)",
     cpu="CPU limit percentage (e.g. 100 or 200)",
     disk="Disk space limit in MB (e.g. 5120 or 10240)",
     node="Select Free Panel Node (autocomplete list available)",
-    name="Server Name (Optional, default: Nexa Server)"
+    name="Server Name (Optional, default: PteroLink Server)"
 )
 @app_commands.autocomplete(email=free_panel_email_autocomplete, node=free_panel_node_autocomplete)
-async def freeservercreate_slash(interaction: discord.Interaction, email: str, ram: int, cpu: int, disk: int, node: str = None, name: str = "Nexa Server"):
+async def freeservercreate_slash(interaction: discord.Interaction, email: str, ram: int, cpu: int, disk: int, node: str = None, name: str = "PteroLink Server"):
     if not is_allowed_server(interaction.guild):
         await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
         return
@@ -1260,7 +1260,7 @@ async def freeservercreate_slash(interaction: discord.Interaction, email: str, r
     except Exception as e:
         await interaction.followup.send(f"❌ Free Server Creation Failed: {e}", ephemeral=False)
 
-@bot.tree.command(name="freeusercreate-random", description="Generate a random user account on Free NexaHostings Panel automatically")
+@bot.tree.command(name="freeusercreate-random", description="Generate a random user account on Free PteroLink Panel automatically")
 async def freeusercreate_random_slash(interaction: discord.Interaction):
     if not is_allowed_server(interaction.guild):
         await interaction.response.send_message(embed=send_wrong_server_embed(), ephemeral=True)
@@ -1272,7 +1272,7 @@ async def freeusercreate_random_slash(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=False)
 
     try:
-        email, username, password = generate_random_credentials(prefix="nexa")
+        email, username, password = generate_random_credentials(prefix="pterolink")
         res = await create_panel_user_api(email, username, password, panel_type="free")
 
         panel_url = os.getenv("FREE_PANEL_URL", "https://free.nexahostings.in")
@@ -1614,7 +1614,7 @@ async def linked_info_slash(interaction: discord.Interaction, user: discord.User
             srv_lines = []
             for idx, srv in enumerate(servers, 1):
                 ptype = srv.get("panel_type", "free").capitalize()
-                sname = srv.get("name", "Nexa Server")
+                sname = srv.get("name", "PteroLink Server")
                 sid = srv.get("server_id", "N/A")
                 ip = srv.get("alloc_ip", "N/A")
                 port = srv.get("alloc_port", "N/A")
@@ -1662,7 +1662,7 @@ async def paidusercreate_cmd(ctx, mode_or_email: str = None, username: str = Non
 
     if mode_or_email and mode_or_email.lower() == 'random':
         try:
-            email, username, password = generate_random_credentials(prefix="paid_nexa")
+            email, username, password = generate_random_credentials(prefix="paid_pterolink")
             res = await create_panel_user_api(email, username, password, panel_type="paid")
 
             panel_url = os.getenv("PAID_PANEL_URL", "https://paid.nexahostings.in")
@@ -1732,7 +1732,7 @@ async def paidusercreate_cmd(ctx, mode_or_email: str = None, username: str = Non
         await ctx.send(f"❌ Paid Panel User Creation Failed: {e}")
 
 @bot.command(name='paidservercreate')
-async def paidservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int = None, disk: int = None, node: str = None, *, name: str = "Paid Nexa Server"):
+async def paidservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int = None, disk: int = None, node: str = None, *, name: str = "Paid PteroLink Server"):
     if not is_allowed_server(ctx.guild):
         await ctx.send(embed=send_wrong_server_embed())
         return
@@ -1799,7 +1799,7 @@ async def paidservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int
         await ctx.send(f"❌ Paid Server Creation Failed: {e}")
 
 @bot.command(name='freeservercreate')
-async def freeservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int = None, disk: int = None, node: str = None, *, name: str = "Nexa Server"):
+async def freeservercreate_cmd(ctx, email: str = None, ram: int = None, cpu: int = None, disk: int = None, node: str = None, *, name: str = "PteroLink Server"):
     if not is_allowed_server(ctx.guild):
         await ctx.send(embed=send_wrong_server_embed())
         return
@@ -1875,7 +1875,7 @@ async def freeusercreate_random_cmd(ctx):
         return
 
     try:
-        email, username, password = generate_random_credentials(prefix="nexa")
+        email, username, password = generate_random_credentials(prefix="pterolink")
         res = await create_panel_user_api(email, username, password, panel_type="free")
 
         panel_url = os.getenv("FREE_PANEL_URL", "https://free.nexahostings.in")
@@ -2110,7 +2110,7 @@ async def linkedinfo_cmd(ctx, user: discord.User = None):
             srv_lines = []
             for idx, srv in enumerate(servers, 1):
                 ptype = srv.get("panel_type", "free").capitalize()
-                sname = srv.get("name", "Nexa Server")
+                sname = srv.get("name", "PteroLink Server")
                 sid = srv.get("server_id", "N/A")
                 ip = srv.get("alloc_ip", "N/A")
                 port = srv.get("alloc_port", "N/A")

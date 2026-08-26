@@ -1,6 +1,6 @@
-# ⚡ NexaHostings Unified Discord Bot v1
+# ⚡ PteroLink Unified Discord Bot
 
-A feature-rich, high-performance **Discord Slash Command Bot** integrating **Pterodactyl Panel API** (Free & Paid Panels), **Dynamic Node Selection**, **Auto IP Allocation**, **Multi-Slot Custom Value UPI QR Payment Generator**, and **Private Whitelist Administration**.
+A feature-rich, high-performance **Discord Slash Command Bot** integrating **Pterodactyl Panel API** (Free & Paid Panels), **Dynamic Node Selection**, **Auto IP Allocation**, **Multi-Slot Custom Value UPI QR Payment Generator**, **One-Click Link with User & Auto DM**, and **Private Whitelist Administration**.
 
 ---
 
@@ -39,8 +39,8 @@ A feature-rich, high-performance **Discord Slash Command Bot** integrating **Pte
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/nexahostings-bot.git
-   cd nexahostings-bot
+   git clone https://github.com/your-username/PteroLink.git
+   cd PteroLink
    ```
 
 2. **Install dependencies**:

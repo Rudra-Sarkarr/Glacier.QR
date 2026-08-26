@@ -1,7 +1,7 @@
 {
-  "name": "custom-upi-qr-discord-bot",
+  "name": "pterolink-discord-bot",
   "version": "1.0.0",
-  "description": "Discord Bot for generating custom valued UPI QR codes with up to 4 stored UPI slots",
+  "description": "PteroLink - Discord Bot for Pterodactyl Panel Management & Custom UPI QR Payments",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
