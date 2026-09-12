@@ -1,13 +1,16 @@
 import os
 import json
+import secrets
+from datetime import datetime
 
 DB_FILE = os.path.join(os.path.dirname(__file__), 'data', 'users_db.json')
+PAYMENTS_FILE = os.path.join(os.path.dirname(__file__), 'data', 'payments.json')
 
-def _ensure_dir():
-    os.makedirs(os.path.dirname(DB_FILE), exist_ok=True)
+def _ensure_dir(filepath):
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
 def load_db() -> dict:
-    _ensure_dir()
+    _ensure_dir(DB_FILE)
     if not os.path.exists(DB_FILE):
         return {}
     try:
@@ -18,7 +21,7 @@ def load_db() -> dict:
         return {}
 
 def save_db(db: dict):
-    _ensure_dir()
+    _ensure_dir(DB_FILE)
     try:
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(db, f, indent=2)
@@ -86,59 +89,78 @@ def get_configured_slots(user_id) -> list:
     profile = get_user_profile(user_id)
     return [s for s in profile.get("slots", []) if s.get("upiId") and s.get("upiId").strip()]
 
-# --- User & Server Account Linking Storage ---
-LINKS_DB_FILE = os.path.join(os.path.dirname(__file__), 'data', 'linked_users.json')
 
-def load_links_db() -> dict:
-    _ensure_dir()
-    if not os.path.exists(LINKS_DB_FILE):
+# ==============================================================================
+# PAYMENTS & INVOICES STORAGE
+# ==============================================================================
+
+def load_payments() -> dict:
+    _ensure_dir(PAYMENTS_FILE)
+    if not os.path.exists(PAYMENTS_FILE):
         return {}
     try:
-        with open(LINKS_DB_FILE, 'r', encoding='utf-8') as f:
+        with open(PAYMENTS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f) or {}
     except Exception as e:
-        print(f"Error reading Links DB: {e}")
+        print(f"Error reading Payments DB: {e}")
         return {}
 
-def save_links_db(db: dict):
-    _ensure_dir()
+def save_payments(payments: dict):
+    _ensure_dir(PAYMENTS_FILE)
     try:
-        with open(LINKS_DB_FILE, 'w', encoding='utf-8') as f:
-            json.dump(db, f, indent=2)
+        with open(PAYMENTS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(payments, f, indent=2)
     except Exception as e:
-        print(f"Error saving Links DB: {e}")
+        print(f"Error saving Payments DB: {e}")
 
-def save_linked_item(discord_user_id, item_type: str, data: dict) -> dict:
-    """
-    Links an account or server to a Discord user.
-    item_type: 'account' or 'server'
-    """
-    import datetime
-    db = load_links_db()
-    uid = str(discord_user_id)
-    if uid not in db:
-        db[uid] = {
-            "userId": uid,
-            "accounts": [],
-            "servers": []
-        }
-    
-    item_data = dict(data)
-    item_data["linked_at"] = datetime.datetime.utcnow().isoformat()
+def create_payment_record(
+    user_id: int,
+    amount: str,
+    slot_id: int,
+    upi_id: str,
+    payee_name: str,
+    customer_name: str,
+    customer_email: str,
+    utr: str,
+    note: str = ""
+) -> str:
+    """Creates a new payment record with status PENDING and returns the unique tx_id."""
+    payments = load_payments()
+    date_str = datetime.now().strftime("%Y%m%d")
+    rand_suffix = secrets.token_hex(3).upper()
+    tx_id = f"TXN-{date_str}-{rand_suffix}"
 
-    key = "accounts" if item_type == "account" else "servers"
-    if key not in db[uid]:
-        db[uid][key] = []
-    
-    db[uid][key].append(item_data)
-    save_links_db(db)
-    return db[uid]
+    record = {
+        "tx_id": tx_id,
+        "discord_user_id": str(user_id),
+        "amount": str(amount),
+        "slot_id": int(slot_id),
+        "upi_id": str(upi_id),
+        "payee_name": str(payee_name),
+        "customer_name": str(customer_name),
+        "customer_email": str(customer_email).strip().lower(),
+        "utr": str(utr).strip(),
+        "note": str(note).strip(),
+        "status": "PENDING",  # PENDING, APPROVED, REJECTED
+        "created_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
+        "reviewed_at": None,
+        "reviewed_by": None
+    }
+    payments[tx_id] = record
+    save_payments(payments)
+    return tx_id
 
-def get_user_linked_items(discord_user_id) -> dict:
-    db = load_links_db()
-    uid = str(discord_user_id)
-    return db.get(uid, {"userId": uid, "accounts": [], "servers": []})
+def get_payment_record(tx_id: str) -> dict:
+    payments = load_payments()
+    return payments.get(tx_id)
 
-def get_all_linked_items() -> dict:
-    return load_links_db()
-
+def update_payment_status(tx_id: str, status: str, admin_id: int) -> dict:
+    """Updates the status of a payment (APPROVED or REJECTED)."""
+    payments = load_payments()
+    if tx_id in payments:
+        payments[tx_id]["status"] = status
+        payments[tx_id]["reviewed_at"] = datetime.now().strftime("%d %b %Y, %I:%M %p")
+        payments[tx_id]["reviewed_by"] = str(admin_id)
+        save_payments(payments)
+        return payments[tx_id]
+    return None

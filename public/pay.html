@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete UPI Payment</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: #0b0f19;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 90vh;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 24px;
+      padding: 32px 24px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.6);
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .icon { font-size: 44px; margin-bottom: 8px; }
+    h1 { font-size: 20px; margin: 0 0 6px; color: #ffffff; font-weight: 700; }
+    .amount { font-size: 42px; font-weight: 800; color: #38bdf8; margin: 8px 0; }
+    .payee { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 15px 0;
+      margin: 10px 0;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      color: #ffffff;
+      box-sizing: border-box;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: transform 0.1s ease;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-upi { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .btn-phonepe { background: #5f259f; }
+    .btn-gpay { background: #1a73e8; }
+    .btn-paytm { background: #00b9f5; }
+    .copy-box {
+      margin-top: 24px;
+      padding: 14px;
+      background: #0f172a;
+      border-radius: 12px;
+      font-size: 13px;
+      color: #cbd5e1;
+      cursor: pointer;
+      border: 1px dashed #475569;
+    }
+    .footer { margin-top: 20px; font-size: 12px; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">⚡</div>
+    <h1>Complete UPI Payment</h1>
+    <div class="amount" id="dispAmount">₹0</div>
+    <div class="payee">Payee: <strong id="dispName">Payee</strong> (<code id="dispUpi" style="color:#cbd5e1">upi@id</code>)</div>
+    
+    <a href="#" class="btn btn-upi" id="btnUpi">📱 Open Any UPI App</a>
+    <a href="#" class="btn btn-phonepe" id="btnPhonepe">🟣 Open in PhonePe</a>
+    <a href="#" class="btn btn-gpay" id="btnGpay">🔵 Open in Google Pay</a>
+    <a href="#" class="btn btn-paytm" id="btnPaytm">🔷 Open in Paytm</a>
+
+    <div class="copy-box" id="copyBox">
+      📋 Tap to copy UPI ID: <strong id="copyUpiText"></strong>
+    </div>
+    <div class="footer">If your app does not open automatically, tap your preferred app button above.</div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const pa = params.get('pa') || '';
+    const am = params.get('am') || '';
+    const pn = params.get('pn') || 'Payee';
+    const tn = params.get('tn') || ('Payment of Rs ' + am);
+    const cu = params.get('cu') || 'INR';
+
+    document.getElementById('dispAmount').textContent = '₹' + am;
+    document.getElementById('dispName').textContent = pn;
+    document.getElementById('dispUpi').textContent = pa;
+    document.getElementById('copyUpiText').textContent = pa;
+
+    const qs = new URLSearchParams({ pa, am, pn, tn, cu }).toString();
+    const upiUrl = 'upi://pay?' + qs;
+    const phonepeUrl = 'phonepe://pay?' + qs;
+    const gpayUrl = 'gpay://upi/pay?' + qs;
+    const paytmUrl = 'paytmmp://pay?' + qs;
+
+    document.getElementById('btnUpi').href = upiUrl;
+    document.getElementById('btnPhonepe').href = phonepeUrl;
+    document.getElementById('btnGpay').href = gpayUrl;
+    document.getElementById('btnPaytm').href = paytmUrl;
+
+    document.getElementById('copyBox').onclick = function() {
+      if (pa) {
+        navigator.clipboard.writeText(pa);
+        alert('UPI ID copied to clipboard: ' + pa);
+      }
+    };
+
+    // Auto launch UPI intent on mobile
+    if (pa && am) {
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          window.location.href = upiUrl;
+        }, 300);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
-  "name": "pterolink-discord-bot",
+  "name": "glacier-qr-bot",
   "version": "1.0.0",
-  "description": "PteroLink - Discord Bot for Pterodactyl Panel Management & Custom UPI QR Payments",
+  "description": "Glacier.QR - Professional Discord UPI QR Payment & Automated Email Invoicing Bot",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

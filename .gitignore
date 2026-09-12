@@ -18,6 +18,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+cloudflared.exe
+*.zip
 
 # Node & Package Managers
 node_modules/

@@ -37,7 +37,7 @@ def build_upi_url(upi_id: str, amount, name: str = "", note: str = "") -> str:
         'tn': note.strip() if note and note.strip() else f"Payment of Rs {clean_amt}"
     }
 
-    return f"upi://pay?{urlencode(params)}"
+    return f"upi://pay?{urlencode(params, safe='@')}"
 
 def generate_qr_bytes(upi_url: str) -> bytes:
     qr = qrcode.QRCode(
